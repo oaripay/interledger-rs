@@ -26,7 +26,7 @@ pub fn build<'a, 'b>() -> App<'a, 'b> {
 struct AuthorizedSubCommand;
 
 impl AuthorizedSubCommand {
-    fn with_name(name: &str) -> App {
+    fn with_name(name: &str) -> App<'_, '_> {
         SubCommand::with_name(name).arg(
             Arg::with_name("authorization_key")
                 .long("auth")

@@ -118,7 +118,7 @@ impl IdempotentStore for EngineRedisStore {
             .ignore()
             .expire(&idempotency_key, 86400)
             .ignore();
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
         trace!(
             "Cached {:?}: {:?}, {:?}",
             idempotency_key,
@@ -248,7 +248,7 @@ impl LeftoversStore for EngineRedisStore {
         // type and sum them up.
         let mut connection = self.connection.clone();
         connection
-            .rpush(
+            .rpush::<_, _, ()>(
                 uncredited_amount_key(&account_id),
                 AmountWithScale {
                     num: uncredited_settlement_amount.0,
@@ -287,7 +287,7 @@ impl LeftoversStore for EngineRedisStore {
         )
         .ignore();
 
-        pipe.query_async(&mut connection.clone()).await?;
+        pipe.query_async::<_, ()>(&mut connection.clone()).await?;
 
         Ok(scaled_amount)
     }
@@ -298,7 +298,7 @@ impl LeftoversStore for EngineRedisStore {
     ) -> Result<(), LeftoversStoreError> {
         trace!("Clearing uncredited_settlement_amount {:?}", account_id,);
         let mut connection = self.connection.clone();
-        connection.del(uncredited_amount_key(&account_id)).await?;
+        connection.del::<_, ()>(uncredited_amount_key(&account_id)).await?;
 
         Ok(())
     }
