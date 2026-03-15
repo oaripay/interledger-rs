@@ -31,3 +31,6 @@ serde_test = { version = "1.0", default-features = false }
 [[bench]]
 name = "packets"
 harness = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

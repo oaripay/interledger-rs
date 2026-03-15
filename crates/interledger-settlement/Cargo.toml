@@ -42,3 +42,6 @@ rand = { version = "0.7.2", default-features = false }
 settlement_api = []
 backends_common = ["redis"]
 redis = ["redis_crate"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

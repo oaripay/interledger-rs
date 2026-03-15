@@ -92,3 +92,6 @@ codecov = { repository = "interledger-rs/interledger-rs" }
 [[bench]]
 name = "multiple_payments"
 harness = false
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

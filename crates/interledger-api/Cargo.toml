@@ -45,3 +45,6 @@ tokio-stream = { version = "0.1.7", features = ["sync"] }
 [badges]
 circle-ci = { repository = "interledger-rs/interledger-rs" }
 codecov = { repository = "interledger-rs/interledger-rs" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

@@ -24,3 +24,6 @@ url = { version = "2.1.1", default-features = false }
 [features]
 warp_errors = []
 redis_errors = ["redis"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
