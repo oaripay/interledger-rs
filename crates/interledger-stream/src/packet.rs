@@ -250,7 +250,7 @@ impl StreamPacket {
     }
 
     /// Returns a [FrameIterator](./struct.FrameIterator.html) over the packet's [frames](./enum.Frame.html)
-    pub fn frames(&self) -> FrameIterator {
+    pub fn frames(&self) -> FrameIterator<'_> {
         FrameIterator {
             buffer: &self.buffer_unencrypted[self.frames_offset..],
         }

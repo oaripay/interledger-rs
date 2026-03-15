@@ -3,12 +3,10 @@
 use crate::node::{InterledgerNode, LogWriter};
 use futures::TryFutureExt;
 pub use interledger::{
-    api::{AccountDetails, NodeStore},
     packet::Address,
-    service::Account,
     store::redis::RedisStoreBuilder,
 };
-pub use redis_crate::{ConnectionInfo, IntoConnectionInfo};
+pub use redis_crate::IntoConnectionInfo;
 use ring::hmac;
 use tracing::error;
 

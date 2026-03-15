@@ -483,7 +483,7 @@ impl RedisStore {
 
         // The parent account settings are done via the API. We just
         // had to check for the existence of a parent
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
 
         update_routes(connection, routing_table, &self.db_prefix).await?;
         debug!(
@@ -568,7 +568,7 @@ impl RedisStore {
         )
         .ignore();
 
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
         update_routes(connection, routing_table, &self.db_prefix).await?;
         debug!(
             "Inserted account {} (id: {}, ILP address: {})",
@@ -634,7 +634,7 @@ impl RedisStore {
             pipe.hset(&accounts_key, "settle_to", settle_to);
         }
 
-        pipe.query_async(&mut self.connection.clone()).await?;
+        pipe.query_async::<_, ()>(&mut self.connection.clone()).await?;
 
         // return the updated account
         self.redis_get_account(id).await
@@ -713,7 +713,7 @@ impl RedisStore {
         pipe.del(uncredited_amount_key(&self.db_prefix, id));
 
         let mut connection = self.connection.clone();
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
         update_routes(connection, self.routes.clone(), &self.db_prefix).await?;
         debug!("Deleted account {}", account.id);
         Ok(encrypted)
@@ -826,7 +826,7 @@ impl StreamNotificationsStore for RedisStore {
             redis_crate::cmd("PUBLISH")
                 .arg(published_args)
                 .arg(message)
-                .query_async(&mut connection)
+                .query_async::<_, ()>(&mut connection)
                 .map_err(move |err| error!("Error publish message to Redis: {:?}", err))
                 .await?;
 
@@ -1235,7 +1235,7 @@ impl NodeStore for RedisStore {
             .hset_multiple(&*prefixed_key(&self.db_prefix, STATIC_ROUTES_KEY), &routes)
             .ignore();
 
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
 
         update_routes(connection, routing_table, &self.db_prefix).await?;
         Ok(())
@@ -1261,7 +1261,7 @@ impl NodeStore for RedisStore {
         }
 
         connection
-            .hset(
+            .hset::<_, _, _, ()>(
                 &*prefixed_key(&self.db_prefix, STATIC_ROUTES_KEY),
                 prefix,
                 RedisAccountId(account_id),
@@ -1289,7 +1289,7 @@ impl NodeStore for RedisStore {
         }
 
         connection
-            .set(
+            .set::<_, _, ()>(
                 &*prefixed_key(&self.db_prefix, DEFAULT_ROUTE_KEY),
                 RedisAccountId(account_id),
             )
@@ -1310,7 +1310,7 @@ impl NodeStore for RedisStore {
             .collect();
         debug!("Setting settlement engines to {:?}", asset_to_url_map);
         connection
-            .hset_multiple(
+            .hset_multiple::<_, _, _, ()>(
                 &*prefixed_key(&self.db_prefix, SETTLEMENT_ENGINES_KEY),
                 &asset_to_url_map,
             )
@@ -1361,7 +1361,7 @@ impl AddressStore for RedisStore {
 
         // Save it to Redis
         connection
-            .set(
+            .set::<_, _, ()>(
                 &*prefixed_key(&self.db_prefix, PARENT_ILP_KEY),
                 ilp_address.as_bytes(),
             )
@@ -1420,7 +1420,7 @@ impl AddressStore for RedisStore {
             }
         }
 
-        pipe.query_async(&mut connection.clone()).await?;
+        pipe.query_async::<_, ()>(&mut connection.clone()).await?;
         update_routes(connection, routing_table, &self.db_prefix).await?;
         Ok(())
     }
@@ -1428,7 +1428,7 @@ impl AddressStore for RedisStore {
     async fn clear_ilp_address(&self) -> Result<(), AddressStoreError> {
         self.connection
             .clone()
-            .del(&*prefixed_key(&self.db_prefix, PARENT_ILP_KEY))
+            .del::<_, ()>(&*prefixed_key(&self.db_prefix, PARENT_ILP_KEY))
             .map_err(|err| AddressStoreError::Other(Box::new(err)))
             .await?;
 
@@ -1546,7 +1546,7 @@ impl CcpRoutingStore for RedisStore {
             .hset_multiple(&*prefixed_key(&self.db_prefix, ROUTES_KEY), &routes)
             .ignore();
 
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
         trace!("Saved {} routes to Redis", num_routes);
 
         update_routes(connection, self.routes.clone(), &self.db_prefix).await?;
@@ -1643,7 +1643,7 @@ impl RateLimitStore for RedisStore {
                 .arg(60)
                 // TODO make sure this doesn't overflow
                 .arg(0i64 - (prepare_amount as i64))
-                .query_async(&mut self.connection.clone())
+                .query_async::<_, ()>(&mut self.connection.clone())
                 .map_err(|_| RateLimitError::StoreError)
                 .await?;
         }
@@ -1705,7 +1705,7 @@ impl IdempotentStore for RedisStore {
                 86400,
             )
             .ignore();
-        pipe.query_async(&mut connection).await?;
+        pipe.query_async::<_, ()>(&mut connection).await?;
 
         trace!(
             "Cached {:?}: {:?}, {:?}",
@@ -1906,7 +1906,7 @@ impl LeftoversStore for RedisStore {
         // type and sum them up.
         let mut connection = self.connection.clone();
         connection
-            .rpush(
+            .rpush::<_, _, ()>(
                 uncredited_amount_key(&self.db_prefix, account_id),
                 AmountWithScale {
                     num: uncredited_settlement_amount.0,
@@ -1933,7 +1933,7 @@ impl LeftoversStore for RedisStore {
         if precision_loss > BigUint::from(0u32) {
             self.connection
                 .clone()
-                .rpush(
+                .rpush::<_, _, ()>(
                     uncredited_amount_key(&self.db_prefix, account_id),
                     AmountWithScale {
                         num: precision_loss,
@@ -1953,7 +1953,7 @@ impl LeftoversStore for RedisStore {
         trace!("Clearing uncredited_settlement_amount {:?}", account_id);
         self.connection
             .clone()
-            .del(uncredited_amount_key(&self.db_prefix, account_id))
+            .del::<_, ()>(uncredited_amount_key(&self.db_prefix, account_id))
             .await?;
         Ok(())
     }

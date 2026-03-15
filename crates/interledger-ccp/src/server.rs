@@ -668,7 +668,7 @@ where
             trace!("Checking accounts to skip");
             let mut unavailable_accounts = self.unavailable_accounts.lock();
             let mut skip = Vec::new();
-            for (id, mut backoff) in unavailable_accounts.iter_mut() {
+            for (id, backoff) in unavailable_accounts.iter_mut() {
                 if backoff.skip_intervals > 0 {
                     skip.push(*id);
                 }
