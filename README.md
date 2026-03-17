@@ -1,8 +1,13 @@
 <p align="center">
+RThis is a fork of [interledger-rs](https://github.com/interledger/interledger-rs). Utilizing ust 2026 `stable` edition and redis-rs crate version `1.0.0`.
+</p>
+
+<p align="center">
   <img src="docs/interledger-rs.svg" width="700" alt="Interledger.rs">
 </p>
 
 ---
+
 > Interledger implementation in Rust :money_with_wings:
 
 [![crates.io](https://img.shields.io/crates/v/interledger.svg)](https://crates.io/crates/interledger)
@@ -24,6 +29,7 @@ All crates require Rust 2018 edition and are tested on the following channels:
 See the [testnet instructions](./docs/testnet.md) to quickly connect to the testnet with a bundle that includes the Interledger.rs node and settlement engines.
 
 ## Understanding Interledger.rs
+
 - [HTTP API](./docs/api.md)
 - [Rust API](https://docs.rs/interledger)
 - [Interledger.rs Architecture](./docs/architecture.md)
@@ -95,7 +101,7 @@ See [configuration](./docs/configuration.md) for more details on how the node is
 
 #### Configuring Redis
 
-We have some account settings such as `amount_per_minute_limit` or `packets_per_minute_limit`. In order to enable these options, you need to load the [redis-cell](https://github.com/brandur/redis-cell) module as follows. *You don't need to load this module unless you use the rate-limit options.*
+We have some account settings such as `amount_per_minute_limit` or `packets_per_minute_limit`. In order to enable these options, you need to load the [redis-cell](https://github.com/brandur/redis-cell) module as follows. _You don't need to load this module unless you use the rate-limit options._
 
 ```
 # in your redis config file
