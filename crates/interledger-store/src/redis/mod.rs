@@ -47,8 +47,8 @@ use num_bigint::BigUint;
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 use redis_crate::{
-    self, cmd, from_redis_value, Client, ConnectionInfo, ControlFlow, ErrorKind, FromRedisValue,
-    PubSubCommands, RedisError, RedisWrite, ToRedisArgs, Value,
+    self, cmd, from_redis_value, Client, ConnectionInfo, ControlFlow, FromRedisValue, ParsingError,
+    PubSubCommands, RedisError, RedisWrite, ToRedisArgs, ToSingleRedisArg, Value,
 };
 use redis_crate::{AsyncCommands, Script};
 use secrecy::{ExposeSecret, Secret, SecretBytesMut};
@@ -483,7 +483,7 @@ impl RedisStore {
 
         // The parent account settings are done via the API. We just
         // had to check for the existence of a parent
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
 
         update_routes(connection, routing_table, &self.db_prefix).await?;
         debug!(
@@ -568,7 +568,7 @@ impl RedisStore {
         )
         .ignore();
 
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
         update_routes(connection, routing_table, &self.db_prefix).await?;
         debug!(
             "Inserted account {} (id: {}, ILP address: {})",
@@ -634,7 +634,7 @@ impl RedisStore {
             pipe.hset(&accounts_key, "settle_to", settle_to);
         }
 
-        pipe.query_async::<_, ()>(&mut self.connection.clone()).await?;
+        pipe.query_async::<()>(&mut self.connection.clone()).await?;
 
         // return the updated account
         self.redis_get_account(id).await
@@ -713,7 +713,7 @@ impl RedisStore {
         pipe.del(uncredited_amount_key(&self.db_prefix, id));
 
         let mut connection = self.connection.clone();
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
         update_routes(connection, self.routes.clone(), &self.db_prefix).await?;
         debug!("Deleted account {}", account.id);
         Ok(encrypted)
@@ -826,7 +826,7 @@ impl StreamNotificationsStore for RedisStore {
             redis_crate::cmd("PUBLISH")
                 .arg(published_args)
                 .arg(message)
-                .query_async::<_, ()>(&mut connection)
+                .query_async::<()>(&mut connection)
                 .map_err(move |err| error!("Error publish message to Redis: {:?}", err))
                 .await?;
 
@@ -1235,7 +1235,7 @@ impl NodeStore for RedisStore {
             .hset_multiple(&*prefixed_key(&self.db_prefix, STATIC_ROUTES_KEY), &routes)
             .ignore();
 
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
 
         update_routes(connection, routing_table, &self.db_prefix).await?;
         Ok(())
@@ -1420,7 +1420,7 @@ impl AddressStore for RedisStore {
             }
         }
 
-        pipe.query_async::<_, ()>(&mut connection.clone()).await?;
+        pipe.query_async::<()>(&mut connection.clone()).await?;
         update_routes(connection, routing_table, &self.db_prefix).await?;
         Ok(())
     }
@@ -1546,7 +1546,7 @@ impl CcpRoutingStore for RedisStore {
             .hset_multiple(&*prefixed_key(&self.db_prefix, ROUTES_KEY), &routes)
             .ignore();
 
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
         trace!("Saved {} routes to Redis", num_routes);
 
         update_routes(connection, self.routes.clone(), &self.db_prefix).await?;
@@ -1643,7 +1643,7 @@ impl RateLimitStore for RedisStore {
                 .arg(60)
                 // TODO make sure this doesn't overflow
                 .arg(0i64 - (prepare_amount as i64))
-                .query_async::<_, ()>(&mut self.connection.clone())
+                .query_async(&mut self.connection)
                 .map_err(|_| RateLimitError::StoreError)
                 .await?;
         }
@@ -1705,7 +1705,7 @@ impl IdempotentStore for RedisStore {
                 86400,
             )
             .ignore();
-        pipe.query_async::<_, ()>(&mut connection).await?;
+        pipe.query_async::<()>(&mut connection).await?;
 
         trace!(
             "Cached {:?}: {:?}, {:?}",
@@ -1788,7 +1788,7 @@ impl ToRedisArgs for AmountWithScale {
         let mut rv = Vec::new();
         self.num.to_string().write_redis_args(&mut rv);
         self.scale.to_string().write_redis_args(&mut rv);
-        ToRedisArgs::make_arg_vec(&rv, out);
+        ToRedisArgs::write_redis_args(&rv, out);
     }
 }
 
@@ -1807,7 +1807,7 @@ impl AmountWithScale {
         // take 2 elements from the items iterator and return. Then we'd perform
         // the summation and scaling in the consumer of the returned vector.
         for _ in (0..len).step_by(2) {
-            let num: String = match iter.next().map(FromRedisValue::from_redis_value) {
+            let num: String = match iter.next().map(FromRedisValue::from_redis_value_ref) {
                 Some(Ok(n)) => n,
                 _ => return None,
             };
@@ -1816,7 +1816,7 @@ impl AmountWithScale {
                 Err(_) => return None,
             };
 
-            let scale: u8 = match iter.next().map(FromRedisValue::from_redis_value) {
+            let scale: u8 = match iter.next().map(FromRedisValue::from_redis_value_ref) {
                 Some(Ok(c)) => c,
                 _ => return None,
             };
@@ -1847,16 +1847,13 @@ impl AmountWithScale {
 }
 
 impl FromRedisValue for AmountWithScale {
-    fn from_redis_value(v: &Value) -> Result<Self, RedisError> {
-        if let Value::Bulk(ref items) = *v {
+    fn from_redis_value(v: Value) -> Result<Self, ParsingError> {
+        if let Value::Array(ref items) = v {
             if let Some(result) = Self::parse_multi_values(items) {
                 return Ok(result);
             }
         }
-        Err(RedisError::from((
-            ErrorKind::TypeError,
-            "Cannot parse amount with scale",
-        )))
+        Err(ParsingError::from("Cannot parse amount with scale"))
     }
 }
 
@@ -1906,7 +1903,7 @@ impl LeftoversStore for RedisStore {
         // type and sum them up.
         let mut connection = self.connection.clone();
         connection
-            .rpush::<_, _, ()>(
+            .rpush::<String, AmountWithScale, ()>(
                 uncredited_amount_key(&self.db_prefix, account_id),
                 AmountWithScale {
                     num: uncredited_settlement_amount.0,
@@ -2015,6 +2012,12 @@ impl FromStr for RedisAccountId {
     }
 }
 
+impl ToSingleRedisArg for RedisAccountId {
+    fn write_single_redis_arg<W: RedisWrite + ?Sized>(&self, out: &mut W) {
+        out.write_arg(self.0.to_hyphenated().to_string().as_bytes());
+    }
+}
+
 impl Display for RedisAccountId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
         f.write_str(&self.0.to_hyphenated().to_string())
@@ -2028,10 +2031,10 @@ impl ToRedisArgs for RedisAccountId {
 }
 
 impl FromRedisValue for RedisAccountId {
-    fn from_redis_value(v: &Value) -> Result<Self, RedisError> {
+    fn from_redis_value(v: Value) -> Result<Self, ParsingError> {
         let account_id = String::from_redis_value(v)?;
         let id = Uuid::from_str(&account_id)
-            .map_err(|_| RedisError::from((ErrorKind::TypeError, "Invalid account id string")))?;
+            .map_err(|_| ParsingError::from("Invalid account id string"))?;
         Ok(RedisAccountId(id))
     }
 }
@@ -2134,23 +2137,23 @@ impl ToRedisArgs for &AccountWithEncryptedTokens {
         debug_assert!(rv.len() <= ACCOUNT_DETAILS_FIELDS * 2);
         debug_assert!((rv.len() % 2) == 0);
 
-        ToRedisArgs::make_arg_vec(&rv, out);
+        ToRedisArgs::write_redis_args(&rv, out);
     }
 }
 
 impl FromRedisValue for AccountWithEncryptedTokens {
-    fn from_redis_value(v: &Value) -> Result<Self, RedisError> {
+    fn from_redis_value(v: Value) -> Result<Self, ParsingError> {
         let hash: HashMap<String, Value> = HashMap::from_redis_value(v)?;
         let ilp_address: String = get_value("ilp_address", &hash)?;
         let ilp_address = Address::from_str(&ilp_address)
-            .map_err(|_| RedisError::from((ErrorKind::TypeError, "Invalid ILP address")))?;
+            .map_err(|_| ParsingError::from("Invalid ILP address"))?;
         let username: String = get_value("username", &hash)?;
-        let username = Username::from_str(&username)
-            .map_err(|_| RedisError::from((ErrorKind::TypeError, "Invalid username")))?;
+        let username =
+            Username::from_str(&username).map_err(|_| ParsingError::from("Invalid username"))?;
         let routing_relation: Option<String> = get_value_option("routing_relation", &hash)?;
         let routing_relation = if let Some(relation) = routing_relation {
             RoutingRelation::from_str(relation.as_str())
-                .map_err(|_| RedisError::from((ErrorKind::TypeError, "Invalid Routing Relation")))?
+                .map_err(|_| ParsingError::from("Invalid Routing Relation"))?
         } else {
             RoutingRelation::NonRoutingAccount
         };
@@ -2202,27 +2205,26 @@ impl FromRedisValue for AccountWithEncryptedTokens {
     }
 }
 
-fn get_value<V>(key: &str, map: &HashMap<String, Value>) -> Result<V, RedisError>
+fn get_value<V>(key: &str, map: &HashMap<String, Value>) -> Result<V, ParsingError>
 where
     V: FromRedisValue,
 {
     if let Some(value) = map.get(key) {
-        from_redis_value(value)
+        from_redis_value(value.clone())
     } else {
-        Err(RedisError::from((
-            ErrorKind::TypeError,
-            "Account is missing field",
-            key.to_string(),
+        Err(ParsingError::from(format!(
+            "Account is missing field {:?}",
+            key.to_string()
         )))
     }
 }
 
-fn get_value_option<V>(key: &str, map: &HashMap<String, Value>) -> Result<Option<V>, RedisError>
+fn get_value_option<V>(key: &str, map: &HashMap<String, Value>) -> Result<Option<V>, ParsingError>
 where
     V: FromRedisValue,
 {
     if let Some(value) = map.get(key) {
-        from_redis_value(value).map(Some)
+        from_redis_value(value.clone()).map(Some)
     } else {
         Ok(None)
     }
@@ -2231,22 +2233,22 @@ where
 fn get_bytes_option(
     key: &str,
     map: &HashMap<String, Value>,
-) -> Result<Option<BytesMut>, RedisError> {
+) -> Result<Option<BytesMut>, ParsingError> {
     if let Some(value) = map.get(key) {
-        let vec: Vec<u8> = from_redis_value(value)?;
+        let vec: Vec<u8> = from_redis_value(value.clone())?;
         Ok(Some(BytesMut::from(vec.as_slice())))
     } else {
         Ok(None)
     }
 }
 
-fn get_url_option(key: &str, map: &HashMap<String, Value>) -> Result<Option<Url>, RedisError> {
+fn get_url_option(key: &str, map: &HashMap<String, Value>) -> Result<Option<Url>, ParsingError> {
     if let Some(value) = map.get(key) {
-        let value: String = from_redis_value(value)?;
+        let value: String = from_redis_value(value.clone())?;
         if let Ok(url) = Url::parse(&value) {
             Ok(Some(url))
         } else {
-            Err(RedisError::from((ErrorKind::TypeError, "Invalid URL")))
+            Err(ParsingError::from("Invalid URL"))
         }
     } else {
         Ok(None)
