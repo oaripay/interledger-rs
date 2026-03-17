@@ -1,6 +1,10 @@
 <p align="center">
-RThis is a fork of [interledger-rs](https://github.com/interledger/interledger-rs). Utilizing ust 2026 `stable` edition and redis-rs crate version `1.0.0`.
+This is a fork of [interledger-rs](https://github.com/interledger/interledger-rs).
 </p>
+Utilizing:
+
+- Rust 2026 `stable` edition
+- redis-rs crate version `1.0.0`.
 
 <p align="center">
   <img src="docs/interledger-rs.svg" width="700" alt="Interledger.rs">
