@@ -848,7 +848,7 @@ impl BalanceStore for RedisStore {
             .arg(accounts_key(&self.db_prefix, account_id))
             .arg("balance")
             .arg("prepaid_amount")
-            .query_async(&mut self.connection.clone())
+            .query_async(&mut self.connection)
             .await?;
 
         let balance = values[0];
