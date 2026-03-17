@@ -1,6 +1,4 @@
-<p align="center">
 This is a fork of [interledger-rs](https://github.com/interledger/interledger-rs).
-</p>
 Utilizing:
 
 - Rust 2026 `stable` edition
