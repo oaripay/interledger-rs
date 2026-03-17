@@ -284,7 +284,7 @@ where
         .and(warp::path("balance"))
         .and(warp::path::end())
         .and(with_store.clone())
-        .and_then(|id: Uuid, store: S| {
+        .and_then(|id: Uuid, mut store: S| {
             async move {
                 // TODO reduce the number of store calls it takes to get the balance
                 let mut accounts = store.get_accounts(vec![id]).await?;

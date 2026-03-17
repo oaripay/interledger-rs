@@ -843,7 +843,7 @@ impl StreamNotificationsStore for RedisStore {
 impl BalanceStore for RedisStore {
     /// Returns the balance **from the account holder's perspective**, meaning the sum of
     /// the Payable Balance and Pending Outgoing minus the Receivable Balance and the Pending Incoming.
-    async fn get_balance(&self, account_id: Uuid) -> Result<i64, BalanceStoreError> {
+    async fn get_balance(&mut self, account_id: Uuid) -> Result<i64, BalanceStoreError> {
         let values: Vec<i64> = redis_crate::cmd("HMGET")
             .arg(accounts_key(&self.db_prefix, account_id))
             .arg("balance")
