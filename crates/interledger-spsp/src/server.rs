@@ -68,6 +68,7 @@ impl HttpService<Request<Body>> for SpspResponder {
 }
 
 // copied from https://github.com/hyperium/hyper/blob/master/src/common/never.rs
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum Never {}
 

@@ -20,7 +20,7 @@ pub struct RedisReconnect {
 async fn get_shared_connection(redis_info: Arc<ConnectionInfo>) -> Result<MultiplexedConnection> {
     let client = Client::open((*redis_info).clone())?;
     client
-        .get_multiplexed_tokio_connection()
+        .get_multiplexed_async_connection()
         .map_err(|e| {
             error!("Error connecting to Redis: {:?}", e);
             e

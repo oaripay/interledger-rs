@@ -150,7 +150,7 @@ impl NodeClient<'_> {
         url.set_scheme(scheme).map_err(Error::Scheme)?;
 
         let request: Request = Request::builder()
-            .uri(url.into_string())
+            .uri(url.to_string())
             .header("Authorization", format!("Bearer {}", auth))
             .body(())?;
 
@@ -178,7 +178,7 @@ impl NodeClient<'_> {
         url.set_scheme(scheme).map_err(Error::Scheme)?;
 
         let request: Request = Request::builder()
-            .uri(url.into_string())
+            .uri(url.to_string())
             .header("Authorization", format!("Bearer {}", auth))
             .body(())?;
 

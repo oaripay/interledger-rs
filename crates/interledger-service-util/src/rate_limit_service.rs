@@ -38,7 +38,7 @@ pub trait RateLimitStore {
     /// Apply rate limits based on the packets per minute and amount of per minute
     /// limits set on the provided account
     async fn apply_rate_limits(
-        &self,
+        &mut self,
         account: Self::Account,
         prepare_amount: u64,
     ) -> Result<(), RateLimitError>;
@@ -48,7 +48,7 @@ pub trait RateLimitStore {
     /// a packet to a peer, meaning that effectively reject packets do not
     /// count towards a node's throughput limits
     async fn refund_throughput_limit(
-        &self,
+        &mut self,
         account: Self::Account,
         prepare_amount: u64,
     ) -> Result<(), RateLimitError>;

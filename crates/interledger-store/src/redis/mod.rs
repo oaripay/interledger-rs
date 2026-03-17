@@ -844,13 +844,11 @@ impl BalanceStore for RedisStore {
     /// Returns the balance **from the account holder's perspective**, meaning the sum of
     /// the Payable Balance and Pending Outgoing minus the Receivable Balance and the Pending Incoming.
     async fn get_balance(&self, account_id: Uuid) -> Result<i64, BalanceStoreError> {
-        let values: Vec<i64> = self
-            .connection
-            .clone()
-            .hget(
-                accounts_key(&self.db_prefix, account_id),
-                &["balance", "prepaid_amount"],
-            )
+        let values: Vec<i64> = redis_crate::cmd("HMGET")
+            .arg(accounts_key(&self.db_prefix, account_id))
+            .arg("balance")
+            .arg("prepaid_amount")
+            .query_async(&mut self.connection.clone())
             .await?;
 
         let balance = values[0];
@@ -1562,7 +1560,7 @@ impl RateLimitStore for RedisStore {
     ///
     /// This uses https://github.com/brandur/redis-cell so the redis-cell module MUST be loaded into redis before this is run
     async fn apply_rate_limits(
-        &self,
+        &mut self,
         account: Account,
         prepare_amount: u64,
     ) -> Result<(), RateLimitError> {
@@ -1627,7 +1625,7 @@ impl RateLimitStore for RedisStore {
     }
 
     async fn refund_throughput_limit(
-        &self,
+        &mut self,
         account: Account,
         prepare_amount: u64,
     ) -> Result<(), RateLimitError> {
@@ -1643,7 +1641,7 @@ impl RateLimitStore for RedisStore {
                 .arg(60)
                 // TODO make sure this doesn't overflow
                 .arg(0i64 - (prepare_amount as i64))
-                .query_async(&mut self.connection)
+                .query_async::<()>(&mut self.connection)
                 .map_err(|_| RateLimitError::StoreError)
                 .await?;
         }
@@ -2012,11 +2010,7 @@ impl FromStr for RedisAccountId {
     }
 }
 
-impl ToSingleRedisArg for RedisAccountId {
-    fn write_single_redis_arg<W: RedisWrite + ?Sized>(&self, out: &mut W) {
-        out.write_arg(self.0.to_hyphenated().to_string().as_bytes());
-    }
-}
+impl ToSingleRedisArg for RedisAccountId {}
 
 impl Display for RedisAccountId {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {

@@ -2,10 +2,7 @@
 
 use crate::node::{InterledgerNode, LogWriter};
 use futures::TryFutureExt;
-pub use interledger::{
-    packet::Address,
-    store::redis::RedisStoreBuilder,
-};
+pub use interledger::{packet::Address, store::redis::RedisStoreBuilder};
 pub use redis_crate::IntoConnectionInfo;
 use ring::hmac;
 use tracing::error;
@@ -25,7 +22,7 @@ pub async fn serve_redis_node(
     log_writer: Option<LogWriter>,
 ) -> Result<(), ()> {
     let redis_connection_info = node.database_url.clone().into_connection_info().unwrap();
-    let redis_addr = redis_connection_info.addr.clone();
+    let redis_addr = redis_connection_info.addr().clone();
     let redis_secret = generate_redis_secret(&node.secret_seed);
     let store = RedisStoreBuilder::new(redis_connection_info, redis_secret)
         .with_db_prefix(node.database_prefix.as_str())

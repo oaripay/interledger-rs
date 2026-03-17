@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use std::u64;
 
 use bytes::{Buf, BufMut, BytesMut};
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, Utc};
 
 const HIGH_BIT: u8 = 0x80;
 const LOWER_SEVEN_BITS: u8 = 0x7f;
@@ -197,9 +197,9 @@ impl<'a> BufOerExt<'a> for &'a [u8] {
         let s = std::str::from_utf8(octets)
             .expect("re matches only ascii, utf8 conversion must succeed");
 
-        let ts = Utc
-            .datetime_from_str(s, VARIABLE_LENGTH_TIMESTAMP_FORMAT)
-            .map_err(|_| VariableLengthTimestampError::InvalidTimestamp)?;
+        let ts = DateTime::parse_from_str(s, VARIABLE_LENGTH_TIMESTAMP_FORMAT)
+            .map_err(|_| VariableLengthTimestampError::InvalidTimestamp)?
+            .with_timezone(&Utc);
 
         Ok(VariableLengthTimestamp { inner: ts, len })
     }

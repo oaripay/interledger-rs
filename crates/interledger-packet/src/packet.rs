@@ -3,7 +3,7 @@ use std::str;
 use std::time::SystemTime;
 
 use bytes::{Buf, BufMut, BytesMut};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 
 use crate::oer::{self, BufOerExt, MutBufOerExt};
 use crate::{hex::HexString, OerError};
@@ -160,8 +160,9 @@ impl TryFrom<BytesMut> for Prepare {
 
         let expires_at = str::from_utf8(&read_expires_at[..])
             .expect("read_expires_at matches only ascii, utf8 conversion must succeed");
-        let expires_at: DateTime<Utc> =
-            Utc.datetime_from_str(expires_at, INTERLEDGER_TIMESTAMP_FORMAT)?;
+
+        let expires_at =
+            DateTime::parse_from_str(expires_at, INTERLEDGER_TIMESTAMP_FORMAT)?.to_utc();
         let expires_at = SystemTime::from(expires_at);
 
         #[cfg(feature = "roundtrip-only")]
