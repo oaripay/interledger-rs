@@ -20,7 +20,7 @@ use uuid::Uuid;
 #[async_trait]
 pub trait BalanceStore {
     /// Fetch the current balance for the given account id.
-    async fn get_balance(&self, account_id: Uuid) -> Result<i64, BalanceStoreError>;
+    async fn get_balance(&mut self, account_id: Uuid) -> Result<i64, BalanceStoreError>;
 
     /// Decreases the sending account's balance before forwarding out a prepare packet
     async fn update_balances_for_prepare(
