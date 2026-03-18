@@ -1,5 +1,5 @@
 # Build Interledger node into standalone binary
-FROM clux/muslrust:stable as rust
+FROM blackdex/rust-musl:aarch64-musl-stable AS rust
 
 WORKDIR /usr/src/interledger-rs
 COPY ./Cargo.toml /usr/src/interledger-rs/Cargo.toml
@@ -17,7 +17,7 @@ RUN git clone https://github.com/interledger-rs/settlement-engines.git
 WORKDIR /usr/src/settlement-engines
 RUN cargo build --release --all-features --package ilp-settlement-ethereum
 
-FROM node:12-alpine
+FROM node:25-alpine
 
 # Expose ports for HTTP server
 EXPOSE 7770

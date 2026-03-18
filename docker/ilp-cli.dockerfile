@@ -1,5 +1,5 @@
 # Build Interledger node into standalone binary
-FROM clux/muslrust:stable as rust
+FROM blackdex/rust-musl:aarch64-musl-stable AS rust
 
 WORKDIR /usr/src
 COPY ./Cargo.toml /usr/src/Cargo.toml
