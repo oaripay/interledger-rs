@@ -1,6 +1,6 @@
 # Build Interledger node into standalone binary
 FROM blackdex/rust-musl:aarch64-musl-stable AS rust
-ARG CARGO_BUILD_OPTION=""
+ARG CARGO_BUILD_OPTION="--release"
 ARG RUST_BIN_DIR_NAME="debug"
 
 RUN echo "Building profile: ${CARGO_BUILD_OPTION}, output dir: ${RUST_BIN_DIR_NAME}"
@@ -9,7 +9,7 @@ WORKDIR /usr/src
 COPY ./Cargo.toml /usr/src/Cargo.toml
 COPY ./Cargo.lock /usr/src/Cargo.lock
 COPY ./crates /usr/src/crates
-COPY ./.git /usr/src/
+COPY --parents ./.git /usr/src/
 
 RUN cargo build ${CARGO_BUILD_OPTION} --package ilp-node --bin ilp-node
 
